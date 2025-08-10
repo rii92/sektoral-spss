@@ -5,7 +5,6 @@ import numpy as np
 import plotly.express as px
 
 # Logo dan Header
-st.image('https://upload.wikimedia.org/wikipedia/commons/6/6b/Lambang_Kabupaten_Sanggau.png', width=100)
 st.title('Pemantauan Harga Pasar dan Kebutuhan Pokok')
 st.subheader('Kabupaten Sanggau')
 
