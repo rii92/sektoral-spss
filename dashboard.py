@@ -8,6 +8,9 @@ import plotly.express as px
 # Tombol reload data
 st.markdown('## e-Pasar Kabupaten Sanggau')
 reload = st.button('🔄 Reload Data dari Spreadsheet')
+if reload:
+    st.cache_data.clear()
+    st.experimental_rerun()
 
 # Logo dan Header
 st.title('Pemantauan Harga Pasar dan Kebutuhan Pokok')
