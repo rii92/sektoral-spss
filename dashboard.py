@@ -10,12 +10,17 @@ st.subheader('Kabupaten Sanggau')
 
 @st.cache_data
 def load_data():
-    csv_export_url = "https://docs.google.com/spreadsheets/d/14br7OEiGZJKN_NBUKmDpnWO2P9CsXlruk__m1O29brg/export?format=csv&gid=688147621"
+    csv_export_url = "https://docs.google.com/spreadsheets/d/1mDvUZ2TMZHqAtXaWrgbLD5SOPv0cAcMrghGvXa1pC-c/export?format=csv&gid=0"
     df = pd.read_csv(csv_export_url)
+    # Bersihkan header kolom dari spasi/karakter aneh
+    df.columns = df.columns.str.strip().str.replace('\u200b', '').str.replace(' +', ' ', regex=True)
     df['Harga'] = pd.to_numeric(df['Harga'], errors='coerce')
-    print(df)
     return df
-df = load_data()
+try:
+    df = load_data()
+except KeyError as e:
+    st.error(f"Kolom tidak ditemukan di data: {e}.\nCek header file CSV Anda.")
+    st.stop()
 
 
 # Filter interaktif
