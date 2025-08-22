@@ -11,7 +11,10 @@ st.subheader('Kabupaten Sanggau')
 # Load data dari CSV
 @st.cache_data
 def load_data():
-    df = pd.read_csv('data_harga_dummy.csv')
+    csv_export_url = "https://docs.google.com/spreadsheets/d/1mDvUZ2TMZHqAtXaWrgbLD5SOPv0cAcMrghGvXa1pC/export?format=csv&gid=0"
+
+    # Mengambil data dari Google Sheets dan mengonversinya ke DataFrame
+    df = pd.read_csv(csv_export_url)
     return df
 df = load_data()
 
