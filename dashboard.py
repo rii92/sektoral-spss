@@ -14,7 +14,7 @@ if 'reload_data' not in st.session_state:
 if st.button('🔄 Reload Data dari Spreadsheet'):
     st.session_state['reload_data'] = True
     st.cache_data.clear()
-    st.experimental_rerun()
+    st.rerun()
 
 if st.session_state.get('reload_data', False):
     st.session_state['reload_data'] = False
