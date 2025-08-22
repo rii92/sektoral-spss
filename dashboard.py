@@ -4,6 +4,11 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
+
+# Tombol reload data
+st.markdown('## e-Pasar Kabupaten Sanggau')
+reload = st.button('🔄 Reload Data dari Spreadsheet')
+
 # Logo dan Header
 st.title('Pemantauan Harga Pasar dan Kebutuhan Pokok')
 st.subheader('Kabupaten Sanggau')
@@ -22,7 +27,9 @@ except KeyError as e:
     st.error(f"Kolom tidak ditemukan di data: {e}.\nCek header file CSV Anda.")
     st.stop()
 
+    
 
+    reload = st.button('🔄 Reload Data dari Spreadsheet')
 # Filter interaktif
 colTahun, colPeriode, colKategori, colBarang, colKec = st.columns(5)
 with colTahun:
