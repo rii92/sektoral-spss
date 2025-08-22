@@ -8,70 +8,76 @@ import plotly.express as px
 st.title('Pemantauan Harga Pasar dan Kebutuhan Pokok')
 st.subheader('Kabupaten Sanggau')
 
-# Load data dari CSV
 @st.cache_data
 def load_data():
     csv_export_url = "https://docs.google.com/spreadsheets/d/14br7OEiGZJKN_NBUKmDpnWO2P9CsXlruk__m1O29brg/export?format=csv&gid=688147621"
-
-    # Mengambil data dari Google Sheets dan mengonversinya ke DataFrame
     df = pd.read_csv(csv_export_url)
+    df['Harga'] = pd.to_numeric(df['Harga'], errors='coerce')
+    print(df)
     return df
 df = load_data()
 
+
 # Filter interaktif
-colTahun, colPeriode, colBarang, colKec = st.columns(4)
+colTahun, colPeriode, colKategori, colBarang, colKec = st.columns(5)
 with colTahun:
     tahun = st.selectbox('Tahun', sorted(df['Tahun'].unique(), reverse=True))
 with colPeriode:
     periode = st.selectbox('Periode', sorted(df[df['Tahun']==tahun]['Periode'].unique()))
+with colKategori:
+    kategori = st.selectbox('Kategori Barang', ['Semua'] + sorted(df['Kategori Barang'].dropna().unique()))
 with colBarang:
-    barang = st.selectbox('Nama Barang', sorted(df['Nama Barang'].unique()))
+    if kategori != 'Semua':
+        barang_opsi = sorted(df[df['Kategori Barang']==kategori]['Nama Barang'].unique())
+    else:
+        barang_opsi = sorted(df['Nama Barang'].unique())
+    barang = st.selectbox('Nama Barang', barang_opsi)
 with colKec:
     kecamatan = st.selectbox('Kecamatan', ['Semua'] + sorted(df['Kecamatan'].unique()))
 
+
+# Filter untuk tabel detail (semua filter)
 df_filtered = df[(df['Tahun']==tahun) & (df['Periode']==periode)]
+if kategori != 'Semua':
+    df_filtered = df_filtered[df_filtered['Kategori Barang']==kategori]
 if barang:
     df_filtered = df_filtered[df_filtered['Nama Barang']==barang]
 if kecamatan != 'Semua':
     df_filtered = df_filtered[df_filtered['Kecamatan']==kecamatan]
 
+# Filter untuk visualisasi agregat (tahun, periode, kategori)
+df_viz = df[(df['Tahun']==tahun) & (df['Periode']==periode)]
+if kategori != 'Semua':
+    df_viz = df_viz[df_viz['Kategori Barang']==kategori]
+
+
 # Tabel Harga
 st.markdown('### Tabel Harga')
 st.dataframe(df_filtered, use_container_width=True)
 
+# Bar Chart Harga per Komoditas
+st.markdown('### Bar Chart Harga per Komoditas')
+df_bar = df_viz.groupby('Nama Barang')['Harga'].mean().reset_index()
+fig = px.bar(df_bar, x='Harga', y='Nama Barang', orientation='h',
+            labels={'Harga':'Harga (Rp)', 'Nama Barang':'Komoditas'},
+            hover_data={'Harga':':,.0f'}, text='Harga', height=max(400, 40*len(df_bar)))
+fig.update_traces(texttemplate='%{text:,.0f}', textposition='outside')
+fig.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=30, b=0))
+st.plotly_chart(fig, use_container_width=True)
 
-# Interaktif: Pilih beberapa komoditas untuk visualisasi
-komoditas_multi = st.multiselect('Pilih Komoditas untuk Visualisasi:', sorted(df['Nama Barang'].unique()), default=[barang])
+# Heatmap Harga per Komoditas dan Kecamatan
+st.markdown('### Heatmap Harga per Komoditas dan Kecamatan')
+heat_data = df_viz.pivot_table(index='Nama Barang', columns='Kecamatan', values='Harga', aggfunc='mean')
+fig2 = px.imshow(heat_data, text_auto=True, aspect='auto', color_continuous_scale='YlOrRd',
+                labels=dict(color='Harga (Rp)'),
+                title='Harga per Komoditas dan Kecamatan')
+st.plotly_chart(fig2, use_container_width=True)
 
-# Bar Chart Harga Tertinggi per Komoditas (Interaktif)
-st.markdown('### Bar Chart Harga Tertinggi per Komoditas (Interaktif)')
-df_bar = df[(df['Tahun']==tahun) & (df['Periode']==periode) & (df['Nama Barang'].isin(komoditas_multi))]
-if not df_bar.empty:
-    bar_data = df_bar.groupby('Nama Barang')['Tertinggi'].max().reset_index()
-    fig = px.bar(bar_data, x='Tertinggi', y='Nama Barang', orientation='h',
-                labels={'Tertinggi':'Harga Tertinggi (Rp)', 'Nama Barang':'Komoditas'},
-                hover_data={'Tertinggi':':,.0f'}, text='Tertinggi', height=max(400, 40*len(bar_data)))
-    fig.update_traces(texttemplate='%{text:,.0f}', textposition='outside')
-    fig.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(l=0, r=0, t=30, b=0))
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.info('Tidak ada data untuk bar chart.')
-
-# Spacer agar heatmap tidak terhimpit
-st.markdown('---')
-
-# Heatmap Harga per Kecamatan (Multi Komoditas, Interaktif)
-st.markdown('### Heatmap Harga per Kecamatan (Multi Komoditas, Interaktif)')
-komoditas_heatmap_multi = st.multiselect('Pilih Komoditas untuk Heatmap:', sorted(df['Nama Barang'].unique()), default=[barang], key='heatmap_multi')
-df_heat = df[(df['Tahun']==tahun) & (df['Periode']==periode) & (df['Nama Barang'].isin(komoditas_heatmap_multi))]
-if not df_heat.empty:
-    heat_data = df_heat.pivot(index='Nama Barang', columns='Kecamatan', values='Harga')
-    fig2 = px.imshow(heat_data, text_auto=True, aspect='auto', color_continuous_scale='YlOrRd',
-                    labels=dict(color='Harga (Rp)'),
-                    title='Harga per Kecamatan')
-    st.plotly_chart(fig2, use_container_width=True)
-else:
-    st.info('Tidak ada data untuk heatmap.')
+# Pie Chart Distribusi Harga per Kategori
+st.markdown('### Distribusi Rata-rata Harga per Kategori Barang')
+df_pie = df[(df['Tahun']==tahun) & (df['Periode']==periode)].groupby('Kategori Barang')['Harga'].mean().reset_index()
+fig3 = px.pie(df_pie, values='Harga', names='Kategori Barang', title='Distribusi Rata-rata Harga per Kategori Barang', hole=0.3)
+st.plotly_chart(fig3, use_container_width=True)
 
 # Tabel Harga
 st.markdown('### Tabel Harga Tertinggi & Terendah')
@@ -83,7 +89,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown('### Visualisasi Harga Tertinggi per Komoditas (Tahun & Periode)')
     df_top = df[(df['Tahun']==tahun) & (df['Periode']==periode)]
-    top_komoditas = df_top.groupby('Nama Barang')['Tertinggi'].max().sort_values(ascending=False).head(10)
+    top_komoditas = df_top.groupby('Nama Barang')['Harga'].max().sort_values(ascending=False).head(10)
     # (sudah diganti Plotly, kode plt dihapus)
 
 with col2:
@@ -103,7 +109,7 @@ st.markdown('## Insight & Analisis')
 col3, col4 = st.columns(2)
 with col3:
     st.markdown('### Distribusi Harga Tertinggi 10 Komoditas')
-    top10 = df[(df['Tahun']==tahun) & (df['Periode']==periode)].groupby('Nama Barang')['Tertinggi'].max().sort_values(ascending=False).head(10)
+    top10 = df[(df['Tahun']==tahun) & (df['Periode']==periode)].groupby('Nama Barang')['Harga'].max().sort_values(ascending=False).head(10)
     # (sudah diganti Plotly, kode plt dihapus)
 with col4:
     st.markdown('### Sebaran Harga Tertinggi dan Terendah (Boxplot)')
